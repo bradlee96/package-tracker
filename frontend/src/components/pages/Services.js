@@ -1,5 +1,6 @@
 import React, {useState, useEffect} from 'react';
 import '../../App.css';
+import GoogleLogin from 'react-google-login';
 
 export default function Services() {
   const [data, setData] = useState(null);
@@ -10,8 +11,32 @@ export default function Services() {
     .then((data) => setData(data.message));
   }, [])
 
+  const handleLogin = async googleData => {
+    console.log(googleData);
+
+    const res = await fetch("http://localhost:3001/api/v1/auth/google", {
+      method: "POST",
+      BODY: JSON.stringify({
+        token: googleData.tokenId
+      }),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    })
+
+    const data = await res.json();
+    console.log(data); // do something with this data
+  }
+
   return (
     <div>
+      <GoogleLogin
+        clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}
+        buttonText="Sign in with Google"
+        onSuccess={handleLogin}
+        onFailure={handleLogin}
+        cookiePolicy={'single_host_origin'}
+      />
       <h1 className='services'>SERVICES</h1>
       <p>{!data ? "Loading" : data}</p>
     </div>

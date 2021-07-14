@@ -1,6 +1,5 @@
 import './App.css';
 import Navbar from './components/Navbar';
-import HeroSection from './components/HeroSection';
 import { BrowserRouter as Router, Switch, Route} from 'react-router-dom';
 import Home from './components/pages/Home';
 import Products from './components/pages/Products';
