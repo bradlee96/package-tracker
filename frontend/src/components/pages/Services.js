@@ -16,13 +16,13 @@ export default function Services() {
 
     const res = await fetch("http://localhost:3001/api/v1/auth/google", {
       method: "POST",
-      BODY: JSON.stringify({
-        token: googleData.tokenId
-      }),
       headers: {
         "Content-Type": "application/json"
-      }
-    })
+      },
+      body: JSON.stringify({ 
+        token: googleData.tokenId
+      })
+    });
 
     const data = await res.json();
     console.log(data); // do something with this data
