@@ -5,6 +5,8 @@ const cors = require('cors');
 const { OAuth2Client } = require('google-auth-library');
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 app.use(cors({
   origin: ['http://localhost:3000']
 }));
@@ -22,7 +24,7 @@ app.get("/api", (req, res) => {
 
 app.post("/api/v1/auth/google", async (req, res) => {
   console.log("Creating token");
-  console.log(req);
+  console.log(req.body);
   const { token } = req.body;
 
   console.log("Verifying token");

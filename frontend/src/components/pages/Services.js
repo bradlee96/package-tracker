@@ -13,6 +13,7 @@ export default function Services() {
 
   const handleLogin = async googleData => {
     console.log(googleData);
+    console.log(googleData.tokenId);
 
     const res = await fetch("http://localhost:3001/api/v1/auth/google", {
       method: "POST",
@@ -37,7 +38,7 @@ export default function Services() {
         onFailure={handleLogin}
         cookiePolicy={'single_host_origin'}
       />
-      <h1 className='services'>SERVICES</h1>
+      <h1 className='services'>Test</h1>
       <p>{!data ? "Loading" : data}</p>
     </div>
   );
