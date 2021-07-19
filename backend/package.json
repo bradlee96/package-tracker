@@ -16,6 +16,8 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.17.1",
-    "google-auth-library": "^7.3.0"
+    "googleapis": "^81.0.0",
+    "open": "^8.2.1",
+    "server-destroy": "^1.0.1"
   }
 }
