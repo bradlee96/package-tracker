@@ -6,6 +6,8 @@ const http = require('http');
 const url = require('url');
 const opn = require('open'); // get rid of this shit later npm
 const destroyer = require('server-destroy');
+const mongo = require('mongodb').MongoClient;
+const base64url = require('base64url');
 
 const express = require('express');
 const cors = require('cors');
@@ -29,12 +31,25 @@ app.get("/api", (req, res) => {
   res.json({ message: "Hello from server!!" });
 });
 
-app.get("/oauth2callback", (req, res) => {
-  res.json({ message: "Hello from server!!" });
-});
+// MongoDB stuff
 
+// const mongoPath = path.join(__dirname, 'mongodb.keys.json');
+// if (fs.existsSync(mongoPath)) {
+//   connectionString = require(mongoPath).connection_string;
+// }
 
-
+// mongo.connect(connectionString)
+//   .then(client => {
+//     console.log("Connected to DB")
+//     const db = client.db('PackageTracker')
+//     const emails = db.collection('emails')
+//     emails.insertOne({"test": "bob"})
+//       .then(result => {
+//         console.log(result)
+//       })
+//       .catch(error => console.error(error))
+//   })
+//   .catch(error => console.error(err))
 
 // Google API
 
@@ -42,7 +57,7 @@ app.get("/oauth2callback", (req, res) => {
  * To use OAuth2 authentication, we need access to a a CLIENT_ID, CLIENT_SECRET, AND REDIRECT_URI.  To get these credentials for your application, visit https://console.cloud.google.com/apis/credentials.
  */
 const keyPath = path.join(__dirname, 'oauth2.keys.json');
-let keys = {redirect_uris: ['']};
+// let keys = {redirect_uris: ['']};
 if (fs.existsSync(keyPath)) {
   keys = require(keyPath).web;
 }
@@ -62,86 +77,88 @@ const oauth2Client = new google.auth.OAuth2(
 google.options({auth: oauth2Client});
 
 /**
- * Open an http server to accept the oauth callback. In this simple example, the only request to our webserver is to /callback?code=<code>
+ * Returns auth url to frontend
  */
-async function authenticate(scopes) {
-  return new Promise((resolve, reject) => {
-    // grab the url that will be used for authorization
-    const authorizeUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',
-      scope: scopes.join(' '),
-    });
-    // Open an http server to accept the oauth callback. In this simple example, the
-    // only request to our webserver is to /oauth2callback?code=<code>
-    const server = http
-      .createServer(async (req, res) => {
-        try {
-          console.log(req.url);
-          if (req.url.indexOf('/oauth2callback') > -1) {
-            // acquire the code from the querystring, and close the web server.
-            console.log("0");
-            const qs = new url.URL(req.url, 'http://localhost:3000')
-              .searchParams;
-            console.log("A");
-            res.end('Authentication successful! Please return to the console.');
-            server.destroy();
-            const {tokens} = await oauth2Client.getToken(qs.get('code'));
-            oauth2Client.credentials = tokens; // eslint-disable-line require-atomic-updates
-            resolve(oauth2Client);
-            console.log("done");
-          }
-          console.log("B");
-        } catch (e) {
-          console.log("C");
-          reject(e);
-        }
-      })
-      .listen(3000, () => {
-        // open the browser to the authorize url to start the workflow
-        opn(authorizeUrl, {wait: false}).then(cp => cp.unref());
-      });
-    destroyer(server);
+app.get("/oauth2", (req, res) => {
+  // res.json({ message: "Hello!"} );
+  const authorizeUrl = oauth2Client.generateAuthUrl({
+    access_type: 'offline',
+    scope: scopes.join(' '),
   });
-}
+  console.log(authorizeUrl);
+  res.redirect(authorizeUrl);
+})
+
+app.get('/oauth2callback', async (req, res) => {
+  // acquire the code from the querystring, and close the web server.
+  // res.end('Authentication successful! Please return to the console.');
+  const qs = new url.URL(req.url, 'http://localhost:3001').searchParams;
+  // console.log(qs);
+  const {tokens} = await oauth2Client.getToken(qs.get('code'));
+  // console.log(tokens);
+  oauth2Client.credentials = tokens; // eslint-disable-line require-atomic-updates
+  runSample();
+  res.send("<script>window.opener.location.href='http://localhost:3000/package-tracker';window.close();</script>");
+})
 
 async function runSample() {
-  gmail.users.labels.list({
-    userId: 'me',
-  }, (err, res) => {
-    if (err) return console.log('The API returned an error: ' + err);
-    const labels = res.data.labels;
-    if (labels.length) {
-      console.log('Labels:');
-      labels.forEach((label) => {
-        console.log(`- ${label.name}`);
-      });
-    } else {
-      console.log('No labels found.');
-    }
-  });
+  // const res = await gmail.users.threads.list({userId: 'me'});
+  // console.log(res.data);
+  // use next page token
 
-  // retrieve user profile
-  // const res = await people.people.get({
-  //   resourceName: 'people/me',
-  //   personFields: 'emailAddresses',
+  // const res = await gmail.users.threads.get({
+  //   userId: 'me',
+  //   id: '177404f258783ed1'
   // });
   // console.log(res.data);
+  // go through each message? (may be more than one in a thread)
+
+  // const res = await gmail.users.messages.list({
+  //   userId: 'me',
+  //   q: 'package'
+  // });
+  // console.log(res.data);
+
+  const res = await gmail.users.messages.get({
+    userId: 'me',
+    id: '177404f258783ed1',
+    format: 'raw'
+  });
+  console.log(base64url.decode(res.data.raw));
+
+  // const res = await gmail.users.messages.get({
+  //   userId: 'me',
+  //   id: '177404f258783ed1'
+  // });
+  // console.log(res.data);
+  
+  
+  // gmail.users.messages.list({
+  //   userId: 'me',
+  // }, (err, res) => {
+  //   if (err) return console.log('The API returned an error: ' + err);
+  //   const emails = res.data;
+  //   if (emails.length) {
+  //     console.log('Emails:');
+  //     emails.forEach((email) => {
+  //       console.log(`- ${email}`);
+  //     });
+  //   } else {
+  //     console.log('No emails found.');
+  //   }
+  // });
 }
 
 const scopes = [
   'https://www.googleapis.com/auth/gmail.readonly',
 ];
-authenticate(scopes)
-  .then(client => runSample(client))
-  .catch(console.error);
-
 
 /**
  * Lists the labels in the user's account.
  *
  * @param {google.auth.OAuth2} auth An authorized OAuth2 client.
  */
- function listLabels(auth) {
+function listLabels(auth) {
   const gmail = google.gmail({version: 'v1', auth});
   gmail.users.labels.list({
     userId: 'me',

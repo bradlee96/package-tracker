@@ -5,6 +5,7 @@ import Home from './components/pages/Home';
 import Products from './components/pages/Products';
 import Services from './components/pages/Services';
 import SignUp from './components/pages/SignUp';
+import PackageTracker from './components/pages/PackageTracker';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path='/services' exact component={Services} />
         <Route path='/products' exact component={Products} />
         <Route path='/sign-up' exact component={SignUp} />
+        <Route path='/package-tracker' exact component={PackageTracker} />
       </Switch>
     </Router>
     </>
