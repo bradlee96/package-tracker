@@ -16,10 +16,13 @@
   "dependencies": {
     "base64url": "^3.0.1",
     "cors": "^2.8.5",
+    "delivery-tracker": "^2.7.0",
     "express": "^4.17.1",
     "googleapis": "^81.0.0",
+    "html-to-text": "^8.0.0",
     "mongodb": "^4.0.1",
     "open": "^8.2.1",
-    "server-destroy": "^1.0.1"
+    "server-destroy": "^1.0.1",
+    "ts-tracking-number": "^1.0.13"
   }
 }
