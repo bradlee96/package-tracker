@@ -1,7 +1,12 @@
-import './App.css';
+import './App.scss';
 import { GoogleLogin, GoogleLogout } from 'react-google-login';
+
+import Button from '@material-ui/core/Button';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import Container from '@material-ui/core/Container';
 import CssBaseline from '@material-ui/core/CssBaseline';
 import GitHubIcon from '@material-ui/icons/GitHub';
+import Typography from '@material-ui/core/Typography'
 
 import TrackingInfo from './components/TrackingInfo';
 
@@ -20,11 +25,15 @@ const courierLink = {
 
 export default function App() {
   const [isSignedIn, setIsSignedIn] = useState(null);
-  const [allTrackingInfo, setAllTrackingInfo] = useState({});
+  var auth = useRef(null);
   const [emailAddress, setEmailAddress] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  var auth = useRef(null);
+
+  const [allTrackingInfo, setAllTrackingInfo] = useState({});
   var newAllTrackingInfo = useRef(null);
+
+
+  /*** Auth setup ***/
 
   useEffect(() => {
     async function getEmailAddress() {
@@ -53,7 +62,9 @@ export default function App() {
           auth.current.isSignedIn.listen(onAuthChange)
         })
     })
+
     getEmailAddress()
+
   }, [isSignedIn])
 
   // triggered when authentication status changes
@@ -68,24 +79,9 @@ export default function App() {
     auth.current.signOut()
   }
 
-  const renderAuthButton = () => {
-    if (isSignedIn === null) {
-      return null
-    } else if (isSignedIn) {
-      return (
-        <GoogleLogout onClick={onSignOutClick} />
-      )
-    } else {
-      return (
-        <GoogleLogin onClick={onSignInClick} />
-      )
-    }
-  }
-
 
 
   /*** Calling the API and analyzing response ***/
-
 
   /**
    * Calls Gmail API and returns thread IDs of matching emails in the user's inbox
@@ -130,9 +126,9 @@ export default function App() {
   }
 
   /**
-   * Calls Gmail API and returns the contents, sender, and timestamp of an email
+   * Calls Gmail API and returns the contents, sender, timestamp, and threadId of an email
    * @param {string} threadId 
-   * @returns {Array} Array of email contents, sender, and the timestamp
+   * @returns {Array} Array of email contents, sender, timestamp, and threadId
    */
   async function getThreadInfo(threadId) {
     const resFull = await sendApiRequest({
@@ -161,6 +157,11 @@ export default function App() {
     return [rawText, sender, resRaw.result.internalDate, threadId]
   }
 
+  /**
+   * Analyzes an email to find tracking numbers, returns the most likely
+   * @param {string} text
+   * @returns {string} Tracking number
+   */
   async function getTrackingInfo(text) {
     // Get list of potential tracking numbers and carriers
     const trackingNumbers = findTracking(text)
@@ -174,10 +175,18 @@ export default function App() {
     return longest;
   }
 
+  /**
+   * Takes a request and sends it to the Google API client
+   * @param {Object} requestDetails
+   * @returns {Object} Response from the API
+   */
   async function sendApiRequest(requestDetails) {
     return window.gapi.client.request(requestDetails)
   }
 
+  /**
+   * Retrieves emails, analyzes them, and stores tracking information as state
+   */
   async function runSample() {
     setIsLoading(true);
     const threadIds = await getThreadIds()
@@ -205,55 +214,89 @@ export default function App() {
     setIsLoading(false);
   }
 
+
+
+
+  /*** Rendering ***/
+
+  /**
+   * Returns the login/logout button based on state
+   * @returns {Object} Google login/logout button
+   */
+  const renderAuthButton = () => {
+    if (isSignedIn === null)
+      return null
+    else if (isSignedIn)
+      return (<GoogleLogout buttonText="Sign out" onClick={onSignOutClick} />)
+    else
+      return (<GoogleLogin onClick={onSignInClick} />)
+  }
+
+  const renderResults = () => {
+    if (!isSignedIn) {
+      return null;
+    }
+    return (
+      <>
+        <div className="button-request">
+          <Button onClick={runSample} color="primary" disabled={isLoading}>Send request</Button>
+        </div>
+        <div className="tracking-info">
+          {isLoading && <CircularProgress />}
+          {Object.keys(allTrackingInfo).length > 0 &&
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Sender</th>
+                  {/* <th>Carrier</th> */}
+                  <th>Tracking Number</th>
+                  <th>Tracking Link</th>
+                  <th>Original Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.keys(allTrackingInfo).map(key =>
+                  <TrackingInfo
+                    key={key}
+                    number={key}
+                    sender={allTrackingInfo[key]['sender']}
+                    courier={allTrackingInfo[key]['courier']}
+                    messageLink={'https://mail.google.com/mail?authuser=' + emailAddress + '#all/' + allTrackingInfo[key]['threadId']}
+                    trackingLink={courierLink[allTrackingInfo[key]['courier']] + key}
+                    timestamp={new Date(1 * allTrackingInfo[key]['timestamp']).toLocaleDateString()}
+                  />
+                )}
+              </tbody>
+            </table>
+          }
+        </div>
+      </>
+    )
+  }
+
+
+
   return (
     <div className="App">
       <CssBaseline />
-      <header>
-        <h1>Package Tracker</h1>
-        <h2>Searches through emails to find potential tracking numbers for packages</h2>
-      </header>
-      <article>
-        {isSignedIn &&
-          <>
-            <p>Email: {emailAddress}</p>
-            <div>{!isLoading && <button onClick={runSample}>Send request</button>}</div>
-            <div>{isLoading && <button onClick={runSample} disabled>Send request</button>}</div>
-            {isLoading && <i className="fas fa-spinner fa-pulse"></i>}
-            {Object.keys(allTrackingInfo).length > 0 &&
-              <table>
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Sender</th>
-                    <th>Courier</th>
-                    <th>Tracking Number</th>
-                    <th>Link to Tracking</th>
-                    <th>Link to Email</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.keys(allTrackingInfo).map(key =>
-                    <TrackingInfo
-                      key={key}
-                      number={key}
-                      sender={allTrackingInfo[key]['sender']}
-                      courier={allTrackingInfo[key]['courier']}
-                      messageLink={'https://mail.google.com/mail?authuser=' + emailAddress.current + '#all/' + allTrackingInfo[key]['threadId']}
-                      trackingLink={courierLink[allTrackingInfo[key]['courier']] + key}
-                      timestamp={new Date(1 * allTrackingInfo[key]['timestamp']).toLocaleDateString()}
-                    />
-                  )}
-                </tbody>
-              </table>
-            }
-          </>
-        }
-        <div>{renderAuthButton()}</div>
-      </article>
-      <footer>
-        <p>Currently, this web app only works with Gmail.</p>
-        <GitHubIcon/>
-      </footer>
+      <Container>
+        <header>
+          <h1>Package Tracker</h1>
+          <h2>Searches through emails to find potential tracking numbers for packages</h2>
+        </header>
+        <article>
+          <div className="google-info">
+            {isSignedIn && <p>Email: {emailAddress}</p>}
+            {renderAuthButton()}
+          </div>
+          {renderResults()}
+        </article>
+        <footer>
+          <p>Currently, this web app only works with Gmail. Not all returned results will be accurate.</p>
+          <a href="https://github.com/bradlee96/package-tracker" target="_blank" rel="noreferrer"><GitHubIcon /></a>
+        </footer>
+      </Container>
     </div>
   )
 }

@@ -8,11 +8,11 @@
                        "footer";
   justify-content: center;
   align-items: center;
-
-  background: cyan;
+  padding: 0 1em;
 }
 
 header {
+  width: 100%;
   grid-area: "header";
 }
 header h1 {
@@ -23,22 +23,55 @@ header h1 {
 }
 header h2 {
   text-align: center;
-  padding: 0 1em;
 
   font-size: 1em;
   font-weight: normal;
 }
 
 article {
+  width: 100%;
+  
   grid-area: "content";
+  display: grid;
+  grid-template-rows: 3em 2em 1fr;
+  grid-template-areas: "google-info"
+                       "button-request"
+                       "tracking-info";
+  justify-content: center;
+  align-items: center;
+}
+.google-info {
+  width: 100%;
+  grid-area: "google-info";
+  display: flex;
+  justify-content: space-between;
+}
+.button-request {
+  grid-area: "button-request";
+}
+.tracking-info {
+  grid-area: "tracking-info";
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+th {
+  text-align: left;
 }
 
 footer {
+  width: 100%;
   grid-area: "footer";
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
+
+  text-align: center;
+}
+footer a {
+  color: black;
 }
 
 @media screen and (min-width: 768px) {
