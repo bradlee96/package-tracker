@@ -35,7 +35,7 @@ export default function Header(props) {
         </Grid>
         <div className="button-request">
           <Button onClick={props.track} variant="contained" color="primary" disabled={props.isLoading || !props.isSignedIn}>
-            Send request
+            Analyze emails
           </Button>
         </div>
       </Grid>
