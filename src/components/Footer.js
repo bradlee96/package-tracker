@@ -9,7 +9,7 @@ export default function Footer() {
         <Grid item align="center">
           <Box display={{ xs: 'none', md: 'block' }}>
             <Typography variant="caption">
-              Currently, this web app only works with Gmail. There may be false positives.
+              Currently, this web app only works with Gmail.
             </Typography>
           </Box>
         </Grid>
