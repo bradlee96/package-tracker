@@ -1,14 +1,12 @@
 import './App.scss';
 import { GoogleLogin, GoogleLogout } from 'react-google-login';
 
-import Button from '@material-ui/core/Button';
-import CircularProgress from '@material-ui/core/CircularProgress';
-import Container from '@material-ui/core/Container';
-import CssBaseline from '@material-ui/core/CssBaseline';
-import GitHubIcon from '@material-ui/icons/GitHub';
-import Typography from '@material-ui/core/Typography'
+import { Box, CircularProgress, Container, CssBaseline, Grid, Typography } from '@material-ui/core';
+import { createTheme, ThemeProvider } from '@material-ui/core/styles';
 
-import TrackingInfo from './components/TrackingInfo';
+import Header from './components/Header';
+import TrackingInfoTable from './components/TrackingInfoTable';
+import Footer from './components/Footer';
 
 import { useState, useEffect, useRef } from 'react';
 import base64url from 'base64url';
@@ -16,20 +14,22 @@ import { findTracking } from 'ts-tracking-number';
 
 var SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
-const courierLink = {
-  'FedEx': 'https://www.fedex.com/fedextrack/?action=track&trackingnumber=',
-  'UPS': 'https://www.ups.com/track?tracknum=',
-  'DHL': 'https://www.dhl.com/us-en/home/tracking/tracking-express.html?submit=1&tracking-id=',
-  'USPS': 'https://tools.usps.com/go/TrackConfirmAction?&tLabels='
-}
+const theme = createTheme();
+theme.typography.h3 = {
+  [theme.breakpoints.up('sm')]: {
+    fontSize: '2.4rem',
+  }
+};
 
 export default function App() {
   const [isSignedIn, setIsSignedIn] = useState(null);
   var auth = useRef(null);
   const [emailAddress, setEmailAddress] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [totalEmails, setTotalEmails] = useState(null);
+  const [currentEmail, setCurrentEmail] = useState(null);
 
-  const [allTrackingInfo, setAllTrackingInfo] = useState({});
+  const [allTrackingInfo, setAllTrackingInfo] = useState([]);
   var newAllTrackingInfo = useRef(null);
 
 
@@ -71,6 +71,7 @@ export default function App() {
   // updates auth state to current auth status
   const onAuthChange = () => {
     setIsSignedIn(auth.current.isSignedIn.get())
+    setIsLoading(false)
   }
   const onSignInClick = () => {
     auth.current.signIn()
@@ -95,31 +96,36 @@ export default function App() {
 
     // Set query string
     // const queryString = `package OR shipping OR shipped OR tracking before:${tomorrow} -return`
-    const queryString = `package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`
+    const queryStrings = [
+      `package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`,
+      `in:trash package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`
+    ]
 
-    // Request threads and extract threadIds
-    var res = await sendApiRequest({
-      path: '/gmail/v1/users/me/threads',
-      params: {
-        q: queryString
-      }
-    });
-    if (res.error)
-      throw new Error(`Error fetching threads, status: ${res.status}`)
-    var threadIds = res.result.resultSizeEstimate === 0 ? [] : res.result.threads.map(_ => _.id)
-
-    // If the response returns a nextPageToken, loop through until all threadIds have been extracted
-    while (res.result.nextPageToken) {
-      res = await sendApiRequest({
+    for (const queryString of queryStrings) {
+      // Request threads and extract threadIds
+      var res = await sendApiRequest({
         path: '/gmail/v1/users/me/threads',
         params: {
-          q: queryString,
-          pageToken: res.result.nextPageToken
+          q: queryString
         }
       });
       if (res.error)
-        throw new Error(`Error fetching threads on next page, status: ${res.status}`)
-      threadIds.push(...res.result.threads.map(_ => _.id))
+        throw new Error(`Error fetching threads, status: ${res.status}`)
+      var threadIds = res.result.resultSizeEstimate === 0 ? [] : res.result.threads.map(_ => _.id)
+
+      // If the response returns a nextPageToken, loop through until all threadIds have been extracted
+      while (res.result.nextPageToken) {
+        res = await sendApiRequest({
+          path: '/gmail/v1/users/me/threads',
+          params: {
+            q: queryString,
+            pageToken: res.result.nextPageToken
+          }
+        });
+        if (res.error)
+          throw new Error(`Error fetching threads on next page, status: ${res.status}`)
+        threadIds.push(...res.result.threads.map(_ => _.id))
+      }
     }
 
     return threadIds
@@ -151,10 +157,24 @@ export default function App() {
 
     const senders = resFull.result.payload.headers.filter(_ => _.name.toLowerCase() === 'from').map(_ => _.value)
     const sender = senders.length > 0 ? senders[0] : 'Unknown sender'
+    // const sender = senders.length > 0 ? senders[0].replace(/ *\<[^)]*\> */g, "") : 'Unknown sender'
 
-    // const rawText = convert(base64url.decode(resRaw.result.raw));
-    const rawText = base64url.decode(resRaw.result.raw);
-    return [rawText, sender, resRaw.result.internalDate, threadId]
+    // const text = base64url.decode(resRaw.result.raw);
+    const payload = resFull.result.payload;
+    let text = "";
+    if ("parts" in payload) {
+      const body = payload.parts[0].body
+      if ("data" in body) {
+        text = base64url.decode(body.data)
+      }
+    } else if ("body" in payload) {
+      if ("data" in payload.body) {
+        text = base64url.decode(payload.body.data)
+      }
+    } else {
+      throw new Error('Fatal Error: Payload does not contain parts or body!')
+    }
+    return [text, sender, resRaw.result.internalDate, threadId]
   }
 
   /**
@@ -165,14 +185,23 @@ export default function App() {
   async function getTrackingInfo(text) {
     // Get list of potential tracking numbers and carriers
     const trackingNumbers = findTracking(text)
+
+    // Check to see if the text actually contains these key words
+    const substrings = ["package", "ship", "tracking", "order"]
+    if (new RegExp(substrings.join("|")).test(text) === false) {
+      return null
+    }
+
     if (trackingNumbers.length === 0) return null;
     if (trackingNumbers.length === 1) return trackingNumbers[0];
-    var longest = trackingNumbers.sort(
+
+    // Sort by length, assuming longer is more likely
+    var sortedByLength = trackingNumbers.sort(
       function (a, b) {
         return b.trackingNumber.length - a.trackingNumber.length;
       }
-    )[0];
-    return longest;
+    );
+    return sortedByLength[0];
   }
 
   /**
@@ -187,18 +216,21 @@ export default function App() {
   /**
    * Retrieves emails, analyzes them, and stores tracking information as state
    */
-  async function runSample() {
+  async function track() {
     setIsLoading(true);
     const threadIds = await getThreadIds()
     newAllTrackingInfo.current = {}
+    setTotalEmails(threadIds.length);
 
-    for (const id of threadIds) {
-      let rawText, sender, timestamp, threadId, trackingInfo;
-      [rawText, sender, timestamp, threadId] = await getThreadInfo(id)
-      trackingInfo = await getTrackingInfo(rawText)
+    for (const [index, id] of threadIds.entries()) {
+      setCurrentEmail(index + 1)
+      let text, sender, timestamp, threadId, trackingInfo;
+      [text, sender, timestamp, threadId] = await getThreadInfo(id)
+      trackingInfo = await getTrackingInfo(text)
 
       if (trackingInfo !== null) {
         newAllTrackingInfo.current[trackingInfo['trackingNumber']] = {
+          number: trackingInfo['trackingNumber'],
           courier: trackingInfo.courier.name,
           sender: sender,
           timestamp: timestamp,
@@ -207,11 +239,18 @@ export default function App() {
       }
     }
 
-    setAllTrackingInfo({
-      ...allTrackingInfo, ...newAllTrackingInfo.current
-    })
-    // console.log(allTrackingInfo)
+    // Sorting the items by timestamp
+    var items = Object.keys(newAllTrackingInfo.current).map((key, index) => {
+      return newAllTrackingInfo.current[key];
+    });
+    items.sort(function (first, second) {
+      return second['timestamp'] - first['timestamp'];
+    });
+
+    setAllTrackingInfo(items)
     setIsLoading(false);
+    setTotalEmails(null);
+    setCurrentEmail(null)
   }
 
 
@@ -225,6 +264,7 @@ export default function App() {
    */
   const renderAuthButton = () => {
     if (isSignedIn === null)
+      // return (<GoogleLogin onClick={onSignInClick} disabled/>)
       return null
     else if (isSignedIn)
       return (<GoogleLogout buttonText="Sign out" onClick={onSignOutClick} />)
@@ -237,41 +277,23 @@ export default function App() {
       return null;
     }
     return (
-      <>
-        <div className="button-request">
-          <Button onClick={runSample} color="primary" disabled={isLoading}>Send request</Button>
-        </div>
-        <div className="tracking-info">
-          {isLoading && <CircularProgress />}
-          {Object.keys(allTrackingInfo).length > 0 &&
-            <table>
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Sender</th>
-                  {/* <th>Carrier</th> */}
-                  <th>Tracking Number</th>
-                  <th>Tracking Link</th>
-                  <th>Original Email</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.keys(allTrackingInfo).map(key =>
-                  <TrackingInfo
-                    key={key}
-                    number={key}
-                    sender={allTrackingInfo[key]['sender']}
-                    courier={allTrackingInfo[key]['courier']}
-                    messageLink={'https://mail.google.com/mail?authuser=' + emailAddress + '#all/' + allTrackingInfo[key]['threadId']}
-                    trackingLink={courierLink[allTrackingInfo[key]['courier']] + key}
-                    timestamp={new Date(1 * allTrackingInfo[key]['timestamp']).toLocaleDateString()}
-                  />
-                )}
-              </tbody>
-            </table>
-          }
-        </div>
-      </>
+      <Grid container item align="center" justifyContent="center">
+        {isLoading &&
+          <Grid item>
+            {currentEmail && <Typography>Scanning emails: {currentEmail}/{totalEmails}</Typography>}
+            <CircularProgress />
+          </Grid>
+        }
+        {/* <TrackingInfoTable allTrackingInfo={[{number: "112312312312323423423487239482734987", timestamp: 2, threadId: 3, courier: 4, sender: "5555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555"}]} emailAddress={emailAddress} /> */}
+        <Box display={{ xs: 'block', sm: 'none' }}>
+        {!isLoading && 
+          <TrackingInfoTable isMobile={true} allTrackingInfo={allTrackingInfo} emailAddress={emailAddress} />
+        }
+        </Box>
+        <Box display={{ xs: 'none', sm: 'block' }}>
+          <TrackingInfoTable isMobile={false} allTrackingInfo={allTrackingInfo} emailAddress={emailAddress} />
+        </Box>
+      </Grid>
     )
   }
 
@@ -280,23 +302,15 @@ export default function App() {
   return (
     <div className="App">
       <CssBaseline />
-      <Container>
-        <header>
-          <h1>Package Tracker</h1>
-          <h2>Searches through emails to find potential tracking numbers for packages</h2>
-        </header>
-        <article>
-          <div className="google-info">
-            {isSignedIn && <p>Email: {emailAddress}</p>}
-            {renderAuthButton()}
-          </div>
-          {renderResults()}
-        </article>
-        <footer>
-          <p>Currently, this web app only works with Gmail. Not all returned results will be accurate.</p>
-          <a href="https://github.com/bradlee96/package-tracker" target="_blank" rel="noreferrer"><GitHubIcon /></a>
-        </footer>
-      </Container>
-    </div>
+      <ThemeProvider theme={theme}>
+        <Container maxWidth="md" className="container">
+          <Grid container direction="column" justifyContent="space-between" alignItems="center" className="main-grid">
+            <Header isLoading={isLoading} renderAuthButton={renderAuthButton} track={track} isSignedIn={isSignedIn} emailAddress={emailAddress} />
+            {renderResults()}
+            <Footer />
+          </Grid>
+        </Container>
+      </ThemeProvider>
+    </div >
   )
 }

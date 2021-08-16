@@ -1,12 +1,52 @@
+import './TrackingInfo.css';
+
+import { TableRow, TableCell } from '@material-ui/core';
+
 export default function TrackingInfo(props) {
   return (
-    <tr>
-      <td>{props.timestamp}</td>
-      <td>{props.sender}</td>
-      {/* <td>{props.courier}</td> */}
-      <td>{props.number}</td>
-      <td><a href={props.trackingLink} target="_blank" rel="noreferrer">{props.courier} <i className="fas fa-external-link-alt"></i></a></td>
-      <td><a href={props.messageLink} target="_blank" rel="noreferrer">Email <i className="fas fa-external-link-alt"></i></a></td>
-    </tr>
+    <TableRow>
+      <TableCell>
+        {props.timestamp}
+      </TableCell>
+
+      {props.isMobile ?
+        <TableCell>
+          <a href={props.messageLink} target="_blank" rel="noreferrer">
+            {props.sender.replace(/ *\<[^)]*\> */g, "")}
+          </a>
+        </TableCell> : <TableCell>
+          {props.sender}
+        </TableCell>
+      }
+
+      {props.isMobile ?
+        <TableCell>
+          <a href={props.trackingLink} target="_blank" rel="noreferrer">
+            {props.courier === "United States Postal Service" ? "USPS" : props.courier}
+          </a>
+        </TableCell> : <TableCell>
+          {props.courier === "United States Postal Service" ? "USPS" : props.courier}
+        </TableCell>
+      }
+
+      {/* <TableCell>{props.number}</TableCell> */}
+
+      {!props.isMobile &&
+        <TableCell>
+          <a href={props.trackingLink} target="_blank" rel="noreferrer">
+            {props.number}
+          </a>
+        </TableCell>
+      }
+
+      {!props.isMobile &&
+        <TableCell>
+          <a href={props.messageLink} target="_blank" rel="noreferrer">
+            Email
+          </a>
+        </TableCell>
+      }
+    </TableRow>
   );
 }
+
