@@ -22,10 +22,10 @@ export default function TrackingInfo(props) {
       {props.isMobile ?
         <TableCell>
           <a href={props.trackingLink} target="_blank" rel="noreferrer">
-            {props.courier === "United States Postal Service" ? "USPS" : props.courier}
+            {props.courier}
           </a>
         </TableCell> : <TableCell>
-          {props.courier === "United States Postal Service" ? "USPS" : props.courier}
+          {props.courier}
         </TableCell>
       }
 

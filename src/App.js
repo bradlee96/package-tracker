@@ -241,7 +241,7 @@ export default function App() {
       if (trackingInfo !== null) {
         newAllTrackingInfo.current[trackingInfo['trackingNumber']] = {
           number: trackingInfo['trackingNumber'],
-          courier: trackingInfo.courier.name,
+          courier: trackingInfo.courier.name === "United States Postal Service" ? "USPS" : trackingInfo.courier.name,
           sender: sender,
           timestamp: timestamp,
           threadId: threadId
