@@ -285,14 +285,16 @@ export default function App() {
           </Grid>
         }
         {/* <TrackingInfoTable allTrackingInfo={[{number: "112312312312323423423487239482734987", timestamp: 2, threadId: 3, courier: 4, sender: "5555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555555"}]} emailAddress={emailAddress} /> */}
-        <Box display={{ xs: 'block', sm: 'none' }}>
-        {!isLoading && 
-          <TrackingInfoTable isMobile={true} allTrackingInfo={allTrackingInfo} emailAddress={emailAddress} />
+        {!isLoading &&
+          <>
+            <Box display={{ xs: 'block', sm: 'none' }}>
+              <TrackingInfoTable isMobile={true} allTrackingInfo={allTrackingInfo} emailAddress={emailAddress} />
+            </Box>
+            <Box display={{ xs: 'none', sm: 'block' }}>
+              <TrackingInfoTable isMobile={false} allTrackingInfo={allTrackingInfo} emailAddress={emailAddress} />
+            </Box>
+          </>
         }
-        </Box>
-        <Box display={{ xs: 'none', sm: 'block' }}>
-          <TrackingInfoTable isMobile={false} allTrackingInfo={allTrackingInfo} emailAddress={emailAddress} />
-        </Box>
       </Grid>
     )
   }
