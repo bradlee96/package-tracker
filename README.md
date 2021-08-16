@@ -11,5 +11,6 @@ Head over to https://bradlee96.github.io/package-tracker/. Simply sign in using 
 ## Possible Next Steps
 
 - Incorporating a backend/DB to store user data
+- Using a web scraper or courier APIs to get current shipping status
 - AI/ML to more accurately determine if email contains tracking information
 - Adding functionality for Amazon (would require logging into Amazon)
