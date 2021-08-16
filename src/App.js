@@ -1,5 +1,6 @@
 import './App.scss';
 import { GoogleLogin, GoogleLogout } from 'react-google-login';
+import { Switch, Route, BrowserRouter as Router } from 'react-router-dom';
 
 import { Box, CircularProgress, Container, CssBaseline, Grid, Typography } from '@material-ui/core';
 import { createTheme, ThemeProvider } from '@material-ui/core/styles';
@@ -7,6 +8,7 @@ import { createTheme, ThemeProvider } from '@material-ui/core/styles';
 import Header from './components/Header';
 import TrackingInfoTable from './components/TrackingInfoTable';
 import Footer from './components/Footer';
+import PrivacyPolicy from './components/PrivacyPolicy';
 
 import { useState, useEffect, useRef } from 'react';
 import base64url from 'base64url';
@@ -29,7 +31,7 @@ export default function App() {
   const [totalEmails, setTotalEmails] = useState(null);
   const [currentEmail, setCurrentEmail] = useState(null);
 
-  const [allTrackingInfo, setAllTrackingInfo] = useState([]);
+  const [allTrackingInfo, setAllTrackingInfo] = useState(null);
   var newAllTrackingInfo = useRef(null);
 
 
@@ -44,6 +46,7 @@ export default function App() {
         setEmailAddress(res.result.emailAddress);
       } else {
         setEmailAddress(null);
+        setAllTrackingInfo(null);
       }
     }
 
@@ -306,11 +309,22 @@ export default function App() {
       <CssBaseline />
       <ThemeProvider theme={theme}>
         <Container maxWidth="md" className="container">
-          <Grid container direction="column" justifyContent="space-between" alignItems="center" className="main-grid">
-            <Header isLoading={isLoading} renderAuthButton={renderAuthButton} track={track} isSignedIn={isSignedIn} emailAddress={emailAddress} />
-            {renderResults()}
-            <Footer />
-          </Grid>
+          <Router>
+            <Switch>
+              <Route path="/privacy-policy">
+                <PrivacyPolicy />
+              </Route>
+              <Route path="/">
+                <Box className="main-app">
+                  <Grid container direction="column" justifyContent="space-between" alignItems="center" className="main-grid">
+                    <Header isLoading={isLoading} renderAuthButton={renderAuthButton} track={track} isSignedIn={isSignedIn} emailAddress={emailAddress} />
+                    {renderResults()}
+                    <Footer />
+                  </Grid>
+                </Box>
+              </Route>
+            </Switch>
+          </Router>
         </Container>
       </ThemeProvider>
     </div >

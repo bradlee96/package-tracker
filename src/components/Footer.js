@@ -1,4 +1,5 @@
 import { Box, Grid, Link, Typography } from '@material-ui/core';
+import { Link as RouterLink } from 'react-router-dom';
 import GitHubIcon from '@material-ui/icons/GitHub';
 
 
@@ -23,9 +24,9 @@ export default function Footer() {
           </Grid>
           <Grid item>
             <Typography variant="caption">
-              <Link href="https://www.privacypolicies.com/live/d3740594-864d-483c-a02c-753545d6d13a" target="_blank" rel="noreferrer">
+              <RouterLink to="/privacy-policy">
                 Privacy Policy
-              </Link>
+              </RouterLink>
             </Typography>
           </Grid>
         </Grid>
