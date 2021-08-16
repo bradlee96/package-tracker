@@ -94,16 +94,19 @@ export default function App() {
   async function getThreadIds() {
     // Set the range of dates (X days ago - tomorrow, in order to include today)
     const today = new Date()
-    const tomorrow = new Date(today - 24 * 3600 * 1000).toLocaleDateString("en-US")
+    let tomorrow = new Date()
+    tomorrow.setDate(today.getDate() + 1)
+    tomorrow = tomorrow.toLocaleDateString("en-US")
     const certainDaysAgo = new Date(today - 90 * 24 * 3600 * 1000).toLocaleDateString("en-US")
 
     // Set query string
     // const queryString = `package OR shipping OR shipped OR tracking before:${tomorrow} -return`
     const queryStrings = [
-      `package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`,
-      `in:trash package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`
+      // `package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`,
+      `in:all package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`
     ]
 
+    var threadIds = []
     for (const queryString of queryStrings) {
       // Request threads and extract threadIds
       var res = await sendApiRequest({
@@ -114,10 +117,12 @@ export default function App() {
       });
       if (res.error)
         throw new Error(`Error fetching threads, status: ${res.status}`)
-      var threadIds = res.result.resultSizeEstimate === 0 ? [] : res.result.threads.map(_ => _.id)
+      if (res.result.resultSizeEstimate !== 0) {
+        threadIds.push(...res.result.threads.map(_ => _.id))
+      }
 
       // If the response returns a nextPageToken, loop through until all threadIds have been extracted
-      while (res.result.nextPageToken) {
+      while ("nextPageToken" in res.result) {
         res = await sendApiRequest({
           path: '/gmail/v1/users/me/threads',
           params: {
@@ -127,7 +132,9 @@ export default function App() {
         });
         if (res.error)
           throw new Error(`Error fetching threads on next page, status: ${res.status}`)
-        threadIds.push(...res.result.threads.map(_ => _.id))
+        if (res.result.resultSizeEstimate !== 0) {
+          threadIds.push(...res.result.threads.map(_ => _.id))
+        }
       }
     }
 
@@ -255,6 +262,10 @@ export default function App() {
     setTotalEmails(null);
     setCurrentEmail(null)
   }
+
+  // function track() {
+  //   console.log(findTracking("alsdkfjsdif soifjo 441291882183 sdfiasdfj woi74890272896721030079o"))
+  // }
 
 
 
