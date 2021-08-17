@@ -12,7 +12,7 @@ export default function TrackingInfo(props) {
       {props.isMobile ?
         <TableCell>
           <a href={props.messageLink} target="_blank" rel="noreferrer">
-            {props.sender.replace(/ *\<[^)]*\> */g, "")}
+            {props.sender.replace(/ *<[^)]*> */g, "")}
           </a>
         </TableCell> : <TableCell>
           {props.sender}

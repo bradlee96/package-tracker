@@ -13,7 +13,6 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import { useState, useEffect, useRef } from 'react';
 import base64url from 'base64url';
 import { findTracking } from 'ts-tracking-number';
-import { ContactSupportOutlined } from '@material-ui/icons';
 
 var SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
