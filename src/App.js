@@ -102,8 +102,9 @@ export default function App() {
     // Set query string
     // const queryString = `package OR shipping OR shipped OR tracking before:${tomorrow} -return`
     const queryStrings = [
-      // `package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`,
-      `in:all package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`
+      // `in: all package OR shipping OR shipped OR tracking -return after:${certainDaysAgo} before:${tomorrow}`
+      // `in:all ("tracking number") OR (tracking AND (DHL OR FedEx OR UPS OR USPS OR "United States Postal Service")) -return after:${certainDaysAgo} before:${tomorrow}`
+      `in:all ("tracking number") OR (tracking AND (DHL OR FedEx OR UPS OR USPS OR "United States Postal Service")) -return`
     ]
 
     var threadIds = []
