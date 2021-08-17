@@ -13,6 +13,7 @@ import PrivacyPolicy from './components/PrivacyPolicy';
 import { useState, useEffect, useRef } from 'react';
 import base64url from 'base64url';
 import { findTracking } from 'ts-tracking-number';
+import { ContactSupportOutlined } from '@material-ui/icons';
 
 var SCOPE = 'https://www.googleapis.com/auth/gmail.readonly';
 
@@ -153,23 +154,14 @@ export default function App() {
         format: 'full'
       }
     });
-    if (resFull.error)
-      throw new Error(`Error fetching email's full info, status: ${resFull.status}`)
-
-    const resRaw = await sendApiRequest({
-      path: '/gmail/v1/users/me/messages/' + threadId,
-      params: {
-        format: 'raw'
-      }
-    });
-    if (resRaw.error)
-      throw new Error(`Error fetching email's raw info, status: ${resRaw.status}`)
+    if (resFull === null) {
+      return null
+    }
 
     const senders = resFull.result.payload.headers.filter(_ => _.name.toLowerCase() === 'from').map(_ => _.value)
     const sender = senders.length > 0 ? senders[0] : 'Unknown sender'
     // const sender = senders.length > 0 ? senders[0].replace(/ *\<[^)]*\> */g, "") : 'Unknown sender'
 
-    // const text = base64url.decode(resRaw.result.raw);
     const payload = resFull.result.payload;
     let text = "";
     if ("parts" in payload) {
@@ -182,9 +174,10 @@ export default function App() {
         text = base64url.decode(payload.body.data)
       }
     } else {
-      throw new Error('Fatal Error: Payload does not contain parts or body!')
+      // throw new Error('Fatal Error: Payload does not contain parts or body!')
+      return null
     }
-    return [text, sender, resRaw.result.internalDate, threadId]
+    return [text, sender, resFull.result.internalDate, threadId]
   }
 
   /**
@@ -220,7 +213,13 @@ export default function App() {
    * @returns {Object} Response from the API
    */
   async function sendApiRequest(requestDetails) {
-    return window.gapi.client.request(requestDetails)
+    try {
+      const res = await window.gapi.client.request(requestDetails)
+      return res
+    } catch (e) {
+      // console.error(e)
+      return null
+    }
   }
 
   /**
@@ -235,16 +234,19 @@ export default function App() {
     for (const [index, id] of threadIds.entries()) {
       setCurrentEmail(index + 1)
       let text, sender, timestamp, threadId, trackingInfo;
-      [text, sender, timestamp, threadId] = await getThreadInfo(id)
-      trackingInfo = await getTrackingInfo(text)
-
-      if (trackingInfo !== null) {
-        newAllTrackingInfo.current[trackingInfo['trackingNumber']] = {
-          number: trackingInfo['trackingNumber'],
-          courier: trackingInfo.courier.name === "United States Postal Service" ? "USPS" : trackingInfo.courier.name,
-          sender: sender,
-          timestamp: timestamp,
-          threadId: threadId
+      const threadInfo = await getThreadInfo(id);
+      if (threadInfo !== null) {
+        [text, sender, timestamp, threadId] = threadInfo
+        trackingInfo = await getTrackingInfo(text)
+  
+        if (trackingInfo !== null) {
+          newAllTrackingInfo.current[trackingInfo['trackingNumber']] = {
+            number: trackingInfo['trackingNumber'],
+            courier: trackingInfo.courier.name === "United States Postal Service" ? "USPS" : trackingInfo.courier.name,
+            sender: sender,
+            timestamp: timestamp,
+            threadId: threadId
+          }
         }
       }
     }
