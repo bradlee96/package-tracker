@@ -2,7 +2,7 @@
 
 A web app built using Google OAuth2 and Gmail API to analyze a user's emails and display tracking information on packages in the past 90 days.
 
-Unfortunately, this app will only work for emails explicitly added as "test users" as it is not verified by Google and therefore still in "testing."
+This app may show up as "unverified" during the Google Sign-in process as it is not verified by Google and therefore still in "testing." 
 
 ## How To Use
 
